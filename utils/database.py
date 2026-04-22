@@ -1,5 +1,4 @@
 import sqlite3
-import asyncio
 from typing import Any, List, Optional, Tuple
 import aiosqlite
 

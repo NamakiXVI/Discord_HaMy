@@ -8,7 +8,7 @@ BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 PREFIX = "!"  # Fallback-Präfix, hauptsächlich werden Slash-Commands genutzt
 
 # === TikTok-Konfiguration ===
-TIKTOK_USERNAME = "hamy042494"  # Ha Mys TikTok-Benutzername ohne @
+TIKTOK_USERNAME = "ha.my07_"  # Ha Mys TikTok-Benutzername ohne @
 
 # === Discord IDs ===
 GUILD_ID = int(os.getenv("GUILD_ID", "0"))  # Server-ID für syncing

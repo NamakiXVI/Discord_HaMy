@@ -29,16 +29,15 @@ class Welcome(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="🌸 Willkommen in Ha Mys Beauty-Community! 🌸",
+            title="🌸 Willkommen in Ha Mys Ausbeutungsbunker! 🌸",
             description=(
                 f"Hey {member.mention}, herzlich willkommen auf dem Server!\n\n"
                 f"**Über Ha My:**\n"
-                f"Ha My ist eine vietnamesische Beauty-Streamerin mit über 120.000 Followern. "
-                f"Hier findest du Make-up-Tutorials, Beauty-Tipps und eine tolle Community.\n\n"
                 f"**Wichtige Links:**\n"
-                f"🎥 [Ha My auf TikTok](https://tiktok.com/@hamy042494)\n"
+                f"🎥 [Ha My TikTok](https://tiktok.com/@ha.my07_)\n"
                 f"📢 <#{LIVE_NOTIFICATION_CHANNEL_ID}> — Live-Benachrichtigungen\n"
                 f"💬 Allgemeiner Chat"
+                f""
             ),
             color=COLOR_PRIMARY
         )
