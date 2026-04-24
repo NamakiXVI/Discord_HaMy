@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import os
+import traceback
 
 import discord
 from discord.ext import commands
@@ -9,7 +10,10 @@ from discord import app_commands
 from dotenv import load_dotenv
 
 from putergenai import PuterClient
+from putergenai import putergenai as pg
 
+import aiohttp
+import json
 # ---------- Konfiguration ----------
 load_dotenv()
 token = os.getenv('DISCORD_BOT_TOKEN')
@@ -48,15 +52,76 @@ intents.members = True
 
 bot = commands.Bot(command_prefix='§', intents=intents)
 
+
 # ---------- Hilfsfunktion für AI ----------
+async def deepseek_old(set_prompt, set_model):
+    async with PuterClient() as client:
+        await client.login("bomboclat", "Ichbinder1.")
+        try:
+            # API-Aufruf mit Fehlerbehandlung
+            _original_check_used_model = pg.check_used_model
+            result = await client.ai_chat(
+                prompt=set_prompt,
+                options={"model": set_model if set_model else "claude-opus-4.5", "stream": False}
+            )
+            # Versuche, den Inhalt aus verschiedenen möglichen Strukturen zu extrahieren
+            try:
+                # Standard-Pfad (wie ursprünglich)
+                content = result["response"]["result"]["message"]["content"]
+                return content
+            except TypeError:
+                result = await client.ai_chat(
+                    prompt=set_prompt,
+                    options={"model": set_model if set_model else "gpt-4o", "stream": False}
+                )
+                return result["response"]["result"]["message"]["content"]
+        except Exception as e:
+            # Ganzen Traceback loggen
+            error_msg = traceback.format_exc()
+            print("=== FEHLER IN DEEPSEEK ===")
+            print(error_msg)
+            # An den Benutzer eine kurze Fehlermeldung senden
+            return f"❌ Fehler bei der KI-Anfrage: {type(e).__name__}: {e}"
+
 async def deepseek(set_prompt, set_model):
     async with PuterClient() as client:
         await client.login("verplanter", "Ichbinder1.")
-        result = await client.ai_chat(
-            prompt=set_prompt,
-            options={"model": set_model if set_model else "gpt-4o", "stream": False}
-        )
-        return result["response"]["result"]["message"]["content"]
+        
+        # Mehrere Versuche mit unterschiedlichen Parametern
+        for attempt in range(3):
+            try:
+                # Versuch 1 & 2: normaler Aufruf, Versuch 3: mit strict_model=False im options-Dict
+                options = {
+                    "model": set_model if set_model else "gpt-4o",
+                    "stream": False
+                }
+                if attempt == 2:
+                    options["strict_model"] = False  # Manche Versionen akzeptieren das
+                
+                result = await client.ai_chat(prompt=set_prompt, options=options)
+                # Erfolg: Antwort extrahieren
+                return result["response"]["result"]["message"]["content"]
+                
+            except KeyError as e:
+                if e.args and e.args[0] == 0:
+                    # Dies ist der bekannte Fehler in check_used_model
+                    if attempt < 2:
+                        # Warte kurz und probiere es erneut
+                        await asyncio.sleep(0.5)
+                        continue
+                    else:
+                        # Auch beim dritten Versuch fehlgeschlagen
+                        return "❌ Die KI-Antwort konnte nicht verarbeitet werden (Modellprüfung fehlgeschlagen)."
+                else:
+                    # Anderer KeyError
+                    return f"❌ Fehler in der API-Antwort: {e}"
+                    
+            except Exception as e:
+                # Andere Fehler direkt zurückgeben
+                return f"❌ Fehler bei der KI-Anfrage: {type(e).__name__}: {e}"
+        
+        # Sollte nie erreicht werden
+        return "❌ Unbekannter Fehler nach mehreren Versuchen."
 
 # ---------- Bot Events ----------
 @bot.event
@@ -174,6 +239,10 @@ async def ask_prompt(ctx, *, prompt: str, model: str = None):
 
     response = await deepseek(prompt, model)
 
+    if response.startswith("❌ Fehler"):
+        await ctx.send(response, ephemeral=True)
+        return
+
     if len(response) > 2000:
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"response_{timestamp}.txt"
@@ -188,6 +257,7 @@ async def ask_prompt(ctx, *, prompt: str, model: str = None):
         msg = await ctx.send(embed=embed)
         await msg.add_reaction("👍")
         await msg.add_reaction("👎")
+
 
 @bot.hybrid_command(name="senddm", description="Sende eine DM an einen Benutzer (Admin)")
 @app_commands.describe(user="Benutzer (ID, @mention, oder name#1234)", message="Nachricht")
